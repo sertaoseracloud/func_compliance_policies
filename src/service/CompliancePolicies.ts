@@ -10,25 +10,6 @@ interface OutputCompliancePolicy extends CompliancePolicy {
     lastModifiedDateTime: Date;
 }
 
-interface DeviceManagementScriptGroupAssignment {
-    "@odata.type": string;
-    id: string;
-    targetGroupId: string;
-  }
-  
-  interface DeviceManagementScriptAssignment {
-    "@odata.type": string;
-    id: string;
-    target: {
-      "@odata.type": string;
-    };
-  }
-
-interface OutputAssignPolicy {
-    deviceManagementScriptGroupAssignments: DeviceManagementScriptGroupAssignment[] 
-    deviceManagementScriptAssignments: DeviceManagementScriptAssignment[]
-}
-
 /**
  * CompliancePolicies class to handle creating and assigning compliance policies.
  */
@@ -118,10 +99,10 @@ export class CompliancePolicies {
      * @param {string} policyId - The ID of the compliance policy.
      * @param {string} groupId - The ID of the group to assign the policy to.
      * @param {string} accessToken - The access token for authentication.
-     * @returns {Promise<{status: number, body: OutputAssignPolicy}>} - A promise that resolves to the response of the assignment operation.
+     * @returns {Promise<{status: number, body: { ok: boolean }}>} - A promise that resolves to the response of the assignment operation.
      * @throws {Error} - Throws an error if the HTTP request fails.
      */
-    public async assignPolicy(policyId: string, groupId: string, accessToken: string): Promise<{ status: number; body: OutputAssignPolicy; }> {
+    public async assignPolicy(policyId: string, groupId: string, accessToken: string): Promise<{ status: number; body: { ok: boolean }; }> {
         try {
             const url = `${this.graphBaseUrl}/deviceManagement/deviceCompliancePolicies/${policyId}/assign`;
 
@@ -143,11 +124,11 @@ export class CompliancePolicies {
                 },
             };
 
-            const response = await axios.post<OutputAssignPolicy>(url, assignment, config);
+            const response = await axios.post(url, assignment, config);
 
             return {
-                status: 201,
-                body: response.data,
+                status: 204,
+                body: { ok: true },
             };
         } catch (error) {
             console.error("Error assigning compliance policy:", error);
