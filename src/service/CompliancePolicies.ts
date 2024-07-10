@@ -124,7 +124,7 @@ export class CompliancePolicies {
                 },
             };
 
-            const response = await axios.post(url, assignment, config);
+            await axios.post(url, assignment, config);
 
             return {
                 status: 204,
