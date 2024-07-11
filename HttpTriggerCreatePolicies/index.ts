@@ -1,6 +1,7 @@
 import { AzureFunction, Context, HttpRequest } from "@azure/functions";
 import { ServicePrincipal } from "../src/service/ServicePrincipal";
-import { CompliancePolicies } from "../src/service/CompliancePolicies";
+import { CompliancePolicyStrategy, OutputCompliancePolicy } from "../src/strategies/CompliancePolicyStrategy";
+import { PoliciesContext } from "../src/service/PoliciesContext";
 
 /**
  * HTTP trigger function for processing compliance policy assignments.
@@ -37,14 +38,19 @@ const httpTrigger: AzureFunction = async function (context: Context, req: HttpRe
         context.log('Access token received');
 
         // Initialize CompliancePolicies instance with request parameters
-        const compliancePolicies = new CompliancePolicies(req.body.name, req.body.description);
+        const compliancePolicyStrategy = new CompliancePolicyStrategy();
+        const policyContext = new PoliciesContext<OutputCompliancePolicy>(
+            this.name,
+            this.description,
+            compliancePolicyStrategy
+        );
         context.log('Initialized CompliancePolicies with name:', req.body.name, 'and description:', req.body.description);
 
         // Check if complianceid is provided; if not, create a new compliance policy
         let complianceid: string;
         if (!req.body.complianceid) {
             context.log('No complianceid provided, creating a new compliance policy');
-            const compliancePolicy = await compliancePolicies.postCompliancePolicy(accessToken);
+            const compliancePolicy = await policyContext.postPolicy(accessToken);
             complianceid = compliancePolicy.body.id;
             context.log('Created compliance policy with id:', complianceid);
         } else {
@@ -54,7 +60,7 @@ const httpTrigger: AzureFunction = async function (context: Context, req: HttpRe
 
         // Assign the policy to the specified group
         context.log('Assigning policy with complianceid:', complianceid, 'to groupId:', req.body.groupId);
-        const response = await compliancePolicies.assignPolicy(
+        const response = await policyContext.assignPolicy(
             complianceid,
             req.body.groupId,
             accessToken

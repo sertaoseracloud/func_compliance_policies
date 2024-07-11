@@ -1,6 +1,9 @@
 import { AzureFunction, Context, HttpRequest } from "@azure/functions";
 import { ServicePrincipal } from "../src/service/ServicePrincipal";
-import { WindowsUpdateForBusinessConfigurationPolicies } from "../src/service/WindowsUpdateForBusinessConfigurationPolicies";
+//import { WindowsUpdateForBusinessConfigurationPolicies } from "../src/service/WindowsUpdateForBusinessConfigurationPolicies";
+import { OutputWindowsUpdateForBusinessPolicy, WindowsUpdateForBusinessPolicyStrategy } from "../src/strategies/WindowsUpdateForBusinessPolicyStrategy";
+//import { CompliancePolicies } from "../src/service/CompliancePolicies";
+import { PoliciesContext } from "../src/service/PoliciesContext";
 
 /**
  * HTTP trigger Azure Function to manage Windows Update for Business policies.
@@ -35,9 +38,11 @@ const httpTrigger: AzureFunction = async function (context: Context, req: HttpRe
         const accessToken: string = await servicePrincipal.getAccessToken();
         context.log('Access token received');
 
-        const windowsUpdateForBusinessPolicies = new WindowsUpdateForBusinessConfigurationPolicies(
+        const windowsPolicyStrategy = new WindowsUpdateForBusinessPolicyStrategy();
+        const  policyContext = new PoliciesContext<OutputWindowsUpdateForBusinessPolicy>(
             this.name,
-            this.description
+            this.description,
+            windowsPolicyStrategy
         );
 
         let policyId: string;
@@ -45,7 +50,7 @@ const httpTrigger: AzureFunction = async function (context: Context, req: HttpRe
         // Determine policyId
         if (!req.body.policyId) {
             context.log('Creating new Windows Update policy');
-            const windowsUpdatePolicy = await windowsUpdateForBusinessPolicies.postUpdateRingPolicy(accessToken);
+            const windowsUpdatePolicy = await policyContext.postPolicy(accessToken);
             policyId = windowsUpdatePolicy.body.id;
             context.log('Policy created with ID:', policyId);
         } else {
@@ -55,11 +60,11 @@ const httpTrigger: AzureFunction = async function (context: Context, req: HttpRe
 
         // Assign the policy to the specified group
         context.log('Assigning policy to group with ID:', req.body.groupId);
-        const response = await windowsUpdateForBusinessPolicies.assignPolicy(
+        const response = await policyContext.assignPolicy(
             policyId,
             req.body.groupId,
             accessToken
-        );
+        )
         context.log('Policy assignment response:', response);
 
         // Prepare and send the HTTP response
